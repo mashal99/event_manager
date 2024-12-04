@@ -180,6 +180,23 @@ async def users_with_same_role_50_users(db_session):
     await db_session.commit()
     return users
 
+# Add token fixtures
+@pytest.fixture(scope="function")
+async def user_token(user):
+    """Generate an authentication token for a regular user."""
+    return create_access_token(data={"sub": user.email, "role": "AUTHENTICATED"})
+
+
+@pytest.fixture(scope="function")
+async def admin_token(admin_user):
+    """Generate an authentication token for an admin user."""
+    return create_access_token(data={"sub": admin_user.email, "role": "ADMIN"})
+
+@pytest.fixture(scope="function")
+async def manager_token(manager_user):
+    """Generate an authentication token for a manager user."""
+    return create_access_token(data={"sub": manager_user.email, "role": "MANAGER"})
+
 @pytest.fixture
 async def admin_user(db_session: AsyncSession):
     user = User(
