@@ -34,7 +34,11 @@ async def test_retrieve_user_access_allowed(async_client, admin_user, admin_toke
     headers = {"Authorization": f"Bearer {admin_token}"}
     response = await async_client.get(f"/users/{admin_user.id}", headers=headers)
     assert response.status_code == 200
-    assert response.json()["id"] == str(admin_user.id)
+    response_data = response.json()
+    assert response_data["id"] == str(admin_user.id)
+    assert response_data["email"] == admin_user.email
+    assert response_data["nickname"] == admin_user.nickname
+
 
 @pytest.mark.asyncio
 async def test_update_user_email_access_denied(async_client, verified_user, user_token):
