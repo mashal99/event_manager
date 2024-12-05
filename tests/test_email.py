@@ -18,9 +18,11 @@ def mock_smtp_client():
 
 @pytest.fixture
 def email_service(mock_template_manager, mock_smtp_client):
+    from app.services.email_service import EmailService
     service = EmailService(template_manager=mock_template_manager)
-    service.smtp_client = mock_smtp_client  # Inject mock SMTP client
+    service.smtp_client = mock_smtp_client  # Inject the mock SMTP client
     return service
+
 
 @pytest.mark.asyncio
 async def test_send_markdown_email(email_service, mock_smtp_client):
