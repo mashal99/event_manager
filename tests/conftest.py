@@ -16,7 +16,7 @@ Fixtures:
 # Standard library imports
 from builtins import range
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import MagicMock, AsyncMock, patch
 from uuid import uuid4
 
 # Third-party imports
@@ -279,3 +279,10 @@ def user_response_data():
 @pytest.fixture
 def login_request_data():
     return {"email": "john.doe@example.com", "password": "SecurePassword123!"}
+
+@pytest.fixture
+def mock_smtp_client():
+    with patch("app.utils.smtp_connection.SMTPClient") as MockSMTPClient:
+        mock_instance = MockSMTPClient.return_value
+        mock_instance.send_email = MagicMock()  # Mock the send_email method
+        yield mock_instance
