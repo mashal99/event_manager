@@ -29,7 +29,7 @@ from app.schemas.pagination_schema import EnhancedPagination
 from app.schemas.token_schema import TokenResponse
 from app.schemas.user_schemas import LoginRequest, UserBase, UserCreate, UserListResponse, UserResponse, UserUpdate
 from app.services.user_service import UserService
-from app.services.jwt_service import create_access_token, decode_token
+from app.services.jwt_service import create_access_token
 from app.utils.link_generation import create_user_links, generate_pagination_links
 from app.dependencies import get_settings
 from app.services.email_service import EmailService
@@ -50,18 +50,6 @@ async def get_user(user_id: UUID, request: Request, db: AsyncSession = Depends(g
         db: Dependency that provides an AsyncSession for database access.
         token: The OAuth2 access token obtained through OAuth2PasswordBearer dependency.
     """
-    if not token:
-        # Default to an admin user for testing purposes
-        current_user = {"role": "ADMIN"}
-    else:
-        decoded_token = decode_token(token)
-        if not decoded_token:
-            raise HTTPException(status_code=403, detail="Invalid or expired token")
-        if 'role' not in decoded_token or decoded_token['role'] not in ["ADMIN", "MANAGER"]:
-            raise HTTPException(status_code=403, detail="Forbidden: Invalid role")
-        current_user = decoded_token
-
-        
     user = await UserService.get_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -210,23 +198,6 @@ async def register(user_data: UserCreate, session: AsyncSession = Depends(get_db
     raise HTTPException(status_code=400, detail="Email already exists")
 
 @router.post("/login/", response_model=TokenResponse, tags=["Login and Registration"])
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_db)):
-    if await UserService.is_account_locked(session, form_data.username):
-        raise HTTPException(status_code=400, detail="Account locked due to too many failed login attempts.")
-
-    user = await UserService.login_user(session, form_data.username, form_data.password)
-    if user:
-        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-
-        access_token = create_access_token(
-            data={"sub": user.email, "role": str(user.role.name)},
-            expires_delta=access_token_expires
-        )
-
-        return {"access_token": access_token, "token_type": "bearer"}
-    raise HTTPException(status_code=401, detail="Incorrect email or password.")
-
-@router.post("/login/", include_in_schema=False, response_model=TokenResponse, tags=["Login and Registration"])
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_db)):
     if await UserService.is_account_locked(session, form_data.username):
         raise HTTPException(status_code=400, detail="Account locked due to too many failed login attempts.")
