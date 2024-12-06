@@ -53,25 +53,44 @@ class UserService:
     async def create(cls, session: AsyncSession, user_data: Dict[str, str], email_service: EmailService) -> Optional[User]:
         try:
             validated_data = UserCreate(**user_data).model_dump()
+
+            # Check if the user already exists
             existing_user = await cls.get_by_email(session, validated_data['email'])
             if existing_user:
                 logger.error("User with given email already exists.")
                 return None
+
+            # Use provided nickname or generate a new one
+            provided_nickname = validated_data.get('nickname')
+            if provided_nickname:
+                # Ensure the provided nickname is unique
+                if await cls.get_by_nickname(session, provided_nickname):
+                    logger.error(f"Provided nickname '{provided_nickname}' is already taken.")
+                    return None
+                validated_data['nickname'] = provided_nickname
+            else:
+                # Generate a unique nickname
+                new_nickname = generate_nickname()
+                while await cls.get_by_nickname(session, new_nickname):
+                    new_nickname = generate_nickname()
+                validated_data['nickname'] = new_nickname
+
+            # Hash the password and create the user
             validated_data['hashed_password'] = hash_password(validated_data.pop('password'))
             new_user = User(**validated_data)
             new_user.verification_token = generate_verification_token()
-            new_nickname = generate_nickname()
-            while await cls.get_by_nickname(session, new_nickname):
-                new_nickname = generate_nickname()
-            new_user.nickname = new_nickname
+
             session.add(new_user)
             await session.commit()
+
+            # Send a verification email
             await email_service.send_verification_email(new_user)
-            
+
             return new_user
         except ValidationError as e:
             logger.error(f"Validation error during user creation: {e}")
             return None
+
 
     @classmethod
     async def update(cls, session: AsyncSession, user_id: UUID, update_data: Dict[str, str]) -> Optional[User]:
