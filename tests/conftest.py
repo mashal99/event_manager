@@ -16,7 +16,7 @@ Fixtures:
 # Standard library imports
 from builtins import range
 from datetime import datetime
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 # Third-party imports
@@ -163,7 +163,6 @@ async def unverified_user(db_session):
 @pytest.fixture(scope="function")
 async def users_with_same_role_50_users(db_session):
     users = []
-
     for _ in range(50):
         user_data = {
             "nickname": fake.user_name(),
@@ -180,23 +179,6 @@ async def users_with_same_role_50_users(db_session):
         users.append(user)
     await db_session.commit()
     return users
-
-# Add token fixtures
-@pytest.fixture(scope="function")
-async def user_token(user):
-    """Generate an authentication token for a regular user."""
-    return create_access_token(data={"sub": user.email, "role": "AUTHENTICATED"})
-
-
-@pytest.fixture(scope="function")
-async def admin_token(admin_user):
-    """Generate an authentication token for an admin user."""
-    return create_access_token(data={"sub": admin_user.email, "role": "ADMIN"})
-
-@pytest.fixture(scope="function")
-async def manager_token(manager_user):
-    """Generate an authentication token for a manager user."""
-    return create_access_token(data={"sub": manager_user.email, "role": "MANAGER"})
 
 @pytest.fixture
 async def admin_user(db_session: AsyncSession):
@@ -259,8 +241,8 @@ def user_create_data(user_base_data):
 def user_update_data():
     return {
         "email": "john.doe.new@example.com",
-        "first_name": "John",  # Add first_name field
-        "last_name": "Doe",  # Optionally add last_name if needed
+        "first_name": "John",  # Add this field
+        "last_name": "Doe", 
         "bio": "I specialize in backend development with Python and Node.js.",
         "profile_picture_url": "https://example.com/profile_pictures/john_doe_updated.jpg"
     }
@@ -268,7 +250,7 @@ def user_update_data():
 @pytest.fixture
 def user_response_data():
     return {
-        "id": str(uuid4()),  # Generate a valid UUID
+        "id": str(uuid4()),
         "nickname": "testuser",
         "email": "test@example.com",
         "last_login_at": datetime.now(),
@@ -279,11 +261,19 @@ def user_response_data():
 
 @pytest.fixture
 def login_request_data():
-    return {"email": "john.doe@example.com", "password": "SecurePassword123!"}
+    return {"email": "john_doe_123@example.com", "password": "SecurePassword123!"}
 
-@pytest.fixture
-def mock_smtp_client():
-    with patch("app.utils.smtp_connection.SMTPClient") as MockSMTPClient:
-        mock_instance = MockSMTPClient.return_value
-        mock_instance.send_email = MagicMock()  # Mock the send_email method
-        yield mock_instance
+@pytest.fixture(scope="function")
+async def user_token(user):
+    """Generate an authentication token for a regular user."""
+    return create_access_token(data={"sub": user.email, "role": "AUTHENTICATED"})
+
+@pytest.fixture(scope="function")
+async def admin_token(admin_user):
+    """Generate an authentication token for an admin user."""
+    return create_access_token(data={"sub": admin_user.email, "role": "ADMIN"})
+
+@pytest.fixture(scope="function")
+async def manager_token(manager_user):
+    """Generate an authentication token for a manager user."""
+    return create_access_token(data={"sub": manager_user.email, "role": "MANAGER"})
